@@ -1,4 +1,4 @@
-update=20.02.2018 00:44:32
+update=18.03.2018 23:22:25
 version=1
 last_client=kicad
 [pcbnew]
@@ -62,5 +62,6 @@ LibName32=D:/KiCadLibs/libaries/kicad-library/ESP8266
 LibName33=D:/KiCadLibs/libaries/kicad-library/w_rtx
 LibName34=C:/Program Files/KiCad/share/kicad/library/switches
 LibName35=D:/KiCadLibs/converted/74xx-eu
+LibName36=D:/KiCadLibs/mtch101
 [general]
 version=1
