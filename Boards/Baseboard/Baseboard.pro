@@ -1,4 +1,4 @@
-update=18.03.2018 23:22:25
+update=23.06.2018 17:50:39
 version=1
 last_client=kicad
 [pcbnew]
@@ -63,5 +63,15 @@ LibName33=D:/KiCadLibs/libaries/kicad-library/w_rtx
 LibName34=C:/Program Files/KiCad/share/kicad/library/switches
 LibName35=D:/KiCadLibs/converted/74xx-eu
 LibName36=D:/KiCadLibs/mtch101
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=
+SpiceForceRefPrefix=0
+SpiceUseNetNumbers=0
+LabSize=60
 [general]
 version=1
