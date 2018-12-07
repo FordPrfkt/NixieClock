@@ -1,4 +1,4 @@
-update=23.06.2018 17:50:39
+update=01.09.2018 16:28:43
 version=1
 last_client=kicad
 [pcbnew]
@@ -23,46 +23,8 @@ ModuleOutlineThickness=0.150000000000
 [cvpcb]
 version=1
 NetIExt=net
-[eeschema]
+[general]
 version=1
-LibDir=
-[eeschema/libraries]
-LibName1=power
-LibName2=device
-LibName3=transistors
-LibName4=conn
-LibName5=linear
-LibName6=regul
-LibName7=74xx
-LibName8=cmos4000
-LibName9=adc-dac
-LibName10=memory
-LibName11=xilinx
-LibName12=microcontrollers
-LibName13=dsp
-LibName14=microchip
-LibName15=analog_switches
-LibName16=motorola
-LibName17=texas
-LibName18=intel
-LibName19=audio
-LibName20=interface
-LibName21=digital-audio
-LibName22=philips
-LibName23=display
-LibName24=cypress
-LibName25=siliconi
-LibName26=opto
-LibName27=atmel
-LibName28=contrib
-LibName29=valves
-LibName30=D:/KiCadLibs/converted/mc34063
-LibName31=D:/KiCadLibs/libaries/kicad-library/tle4267
-LibName32=D:/KiCadLibs/libaries/kicad-library/ESP8266
-LibName33=D:/KiCadLibs/libaries/kicad-library/w_rtx
-LibName34=C:/Program Files/KiCad/share/kicad/library/switches
-LibName35=D:/KiCadLibs/converted/74xx-eu
-LibName36=D:/KiCadLibs/mtch101
 [schematic_editor]
 version=1
 PageLayoutDescrFile=
@@ -70,8 +32,9 @@ PlotDirectoryName=
 SubpartIdSeparator=0
 SubpartFirstId=65
 NetFmtName=
-SpiceForceRefPrefix=0
-SpiceUseNetNumbers=0
+SpiceAjustPassiveValues=0
 LabSize=60
-[general]
+ERC_TestSimilarLabels=1
+[eeschema]
 version=1
+LibDir=

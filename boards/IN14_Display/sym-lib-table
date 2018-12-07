@@ -1,0 +1,5 @@
+(sym_lib_table
+  (lib (name IN14_Display-rescue)(type Legacy)(uri ${KIPRJMOD}/IN14_Display-rescue.lib)(options "")(descr ""))
+  (lib (name russian-nixies)(type Legacy)(uri D:/KiCadLibs/converted/russian-nixies.lib)(options "")(descr ""))
+  (lib (name tpic)(type Legacy)(uri D:/KiCadLibs/converted/tpic.lib)(options "")(descr ""))
+)

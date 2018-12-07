@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name Baseboard-rescue)(type Legacy)(uri ${KIPRJMOD}/Baseboard-rescue.lib)(options "")(descr ""))
+)
