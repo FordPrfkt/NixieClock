@@ -11,3 +11,7 @@
 
 # Autorouter files (exported from Pcbnew)
 .dsn
+boards/Baseboard/Baseboard-rescue.lib
+boards/Baseboard/Baseboard.html
+boards/Baseboard/Baseboard.xml
+boards/nixie.cfg
