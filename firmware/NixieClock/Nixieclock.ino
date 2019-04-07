@@ -1,12 +1,13 @@
-#include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266Webserver.h>
 #include <ESP8266HTTPUpdateServer.h>
 #include <DNSServer.h>
+#include <FS.h>
 #include <NtpClientLib.h>
 #include <TaskScheduler.h>
 #include <TaskSchedulerDeclarations.h>
-#include "ConfigData.h"
+
+#include "ConfigHandler.h"
 #include "NixieDriver.h"
 
 //ADC_MODE(ADC_VCC);
@@ -25,34 +26,36 @@
 #define THING_NAME "NixieClock"
 
 // -- Initial password to connect to the Thing, when it creates an own Access Point.
-#define INITIAL_PASSWORD "smrtTHNG8266"
-
-boolean syncEventTriggered = false; // True if a time even has been triggered
-boolean beginNTP;
-boolean ntpActive = false;
-NTPSyncEvent_t ntpEvent; // Last triggered event
-byte ctr;
-
-WiFiUDP ntpUDP;
-DNSServer dnsServer;
-ESP8266WebServer server(80);
-ESP8266HTTPUpdateServer httpUpdater;
-ConfigData configData(THING_NAME, INITIAL_PASSWORD, CONFIG_VERSION, dnsServer, server);
-Scheduler runner;
-NixieDriver nxDrv;
-
-//Tasks
-Task t1(5000, TASK_FOREVER, &t1Callback);
-Task t2(25, TASK_FOREVER, &t2Callback);
+#define INITIAL_PASSWORD "NixieClock"
 
 // -- Callback method declarations.
 void wifiConnected();
 void t1Callback();
 void t2Callback();
+void tDisplayOffCallback();
+void handleRoot();
+void fileindex();
+void bootstrap();
+void popper();
+void bootstrapmin();
 void processSyncEvent(NTPSyncEvent_t ntpEvent);
 void updateParameters(void);
-
 void convert(byte data, byte *tens, byte *ones);
+
+Scheduler runner;
+Task t1(250, TASK_FOREVER, &t1Callback);
+Task t2(25, TASK_FOREVER, &t2Callback);
+Task displayOff(1000, TASK_ONCE, &tDisplayOffCallback);
+
+ESP8266WebServer server(80);
+ESP8266HTTPUpdateServer httpUpdater;
+WiFiUDP ntpUDP;
+DNSServer dnsServer;
+ConfigHandler configHandler(THING_NAME, INITIAL_PASSWORD, CONFIG_VERSION, dnsServer, server);
+NTPSyncEvent_t ntpEvent; // Last triggered event
+NixieDriver nxDrv;
+boolean syncEventTriggered = false; // True if a time even has been triggered
+boolean ntpActive = false;
 
 void t1Callback()
 {
@@ -62,6 +65,7 @@ void t1Callback()
     byte mnOnes;
     byte scTens;
     byte scOnes;
+    static byte ctr = 0;
 
     ctr++;
     ctr %= 10;
@@ -78,6 +82,20 @@ void t2Callback()
     nxDrv.update();
 }
 
+void tDisplayOffCallback()
+{
+    nxDrv.setTubesEnabled(false);
+}
+
+void touchInterrupt()
+{
+    if (false == nxDrv.getTubesEnabled())
+    {
+        nxDrv.setTubesEnabled(true);
+    }
+    displayOff.restart();
+}
+
 void setup()
 {
     wdt_disable();
@@ -86,6 +104,9 @@ void setup()
     pinMode(PIN_TOUCH, INPUT);
 
     Serial.begin(115200);
+    SPIFFS.begin();
+    
+    runner.init();
 
     NTP.onNTPSyncEvent([](NTPSyncEvent_t event)
     {   ntpEvent = event; syncEventTriggered = true;});
@@ -104,50 +125,50 @@ void setup()
     Serial.printf("Reset Reason: %s\n", ESP.getResetReason().c_str());
     Serial.print("------------------\n");
 
-    configData.init();
-    configData.setWifiConnectionCallback(wifiConnected);
-    configData.setConfigSavedCallback(updateParameters);
-    configData.setStatusPin(STATUS_PIN);
-    configData.setupUpdateServer(&httpUpdater);
+    configHandler.init();
+    configHandler.setWifiConnectionCallback(wifiConnected);
+    configHandler.setConfigSavedCallback(updateParameters);
+    configHandler.setStatusPin(STATUS_PIN);
+    configHandler.setupUpdateServer(&httpUpdater);
 
     // Set up required URL handlers on the web server.
     server.on("/", handleRoot);
+    server.on("/", fileindex);
+server.on("/index.html", fileindex);
+server.on("/bootstrap.min.css", bootstrap);
+server.on("bootstrap.min.css", bootstrap);
+server.on("/popper.min.js", popper);
+server.on("/bootstrap.min.js", bootstrapmin);
+server.on("bootstrap.min.js", bootstrapmin);
     server.on("/config", [&]
-    {   configData.handleConfig();});
+    {   configHandler.handleConfig();});
     server.onNotFound([&]()
-    {   configData.handleNotFound();});
+    {   configHandler.handleNotFound();});
 
     nxDrv.begin();
     updateParameters();
 
-    runner.init();
     runner.addTask(t1);
     runner.addTask(t2);
+    runner.addTask(displayOff);
 
     Serial.print("Nixie-Clock started\n");
     Serial.print("------------------\n\n");
-    /*
 
      t1.enable();
-     t2.enable();*/
+     t2.enable();
 }
 
 void loop()
 {
     // -- doLoop should be called as frequently as possible.
     runner.execute();
-    configData.doLoop();
+    configHandler.doLoop();
+
     if (syncEventTriggered)
     {
         processSyncEvent(ntpEvent);
         syncEventTriggered = false;
-    }
-
-    if (beginNTP)
-    {
-        NTP.begin(configData.GetNTPServerName(), configData.GetTimezone(), configData.GetDLS(), 0, &ntpUDP);
-        beginNTP = false;
-        ntpActive = true;
     }
 }
 
@@ -157,7 +178,7 @@ void loop()
 void handleRoot()
 {
     // -- Let IotWebConf test and handle captive portal requests.
-    if (configData.handleCaptivePortal())
+    if (configHandler.handleCaptivePortal())
     {
         // -- Captive portal request were already served.
         return;
@@ -180,31 +201,71 @@ void handleRoot()
     server.send(200, "text/html", s);
 }
 
+void fileindex()
+{
+  File file = SPIFFS.open("/index.html", "r");
+  size_t sent = server.streamFile(file, "text/html");
+}
+void bootstrap()
+{
+  File file = SPIFFS.open("/bootstrap.min.css", "r");
+  size_t sent = server.streamFile(file, "text/css");
+}
+void popper()
+{
+  File file = SPIFFS.open("/popper.min.js", "r");
+  size_t sent = server.streamFile(file, "application/javascript");
+}
+void bootstrapmin()
+{
+  File file = SPIFFS.open("/bootstrap.min.js", "r");
+  size_t sent = server.streamFile(file, "application/javascript");
+}
+
 void wifiConnected()
 {
-    if (IOTWEBCONF_STATE_ONLINE == configData.getState())
+    if (IOTWEBCONF_STATE_ONLINE == configHandler.getState())
     {
-        beginNTP = true;
+        if (ntpActive == false)
+        {
+            NTP.begin(configHandler.GetNTPServerName(), configHandler.GetTimezone(), configHandler.GetDLS(), 0, &ntpUDP);
+            ntpActive = true;
+        }
     }
     else
     {
-        NTP.stop();
-        ntpActive = false;
+        if (ntpActive == true)
+        {
+            NTP.stop();
+            ntpActive = false;
+        }
     }
 }
 
 void updateParameters(void)
 {
-    nxDrv.setLEDBrightness(configData.GetLEDBrightness());
-    nxDrv.setAnimateDigits(configData.GetAnimateDigits());
-    /* TODO: DisplayOnDuration, TouchEnabled */
+    nxDrv.setLEDBrightness(configHandler.GetLEDBrightness());
+    nxDrv.setAnimateDigits(configHandler.GetAnimateDigits());
+
+    if (configHandler.GetTouchEnabled() == true)
+    {
+        attachInterrupt(digitalPinToInterrupt(PIN_TOUCH), touchInterrupt, FALLING);
+        displayOff.setInterval(configHandler.GetDisplayOnTime() * TASK_MINUTE);
+        displayOff.restart();
+    }
+    else
+    {
+        displayOff.disable();
+        detachInterrupt(PIN_TOUCH);
+
+    }
 
     if (ntpActive == true)
     {
-        NTP.setNtpServerName(configData.GetNTPServerName());
-        NTP.setInterval(configData.GetNTPUpdateInterval());
-        NTP.setTimeZone(configData.GetTimezone());
-        NTP.setDayLight(configData.GetDLS());
+        NTP.setNtpServerName(configHandler.GetNTPServerName());
+        NTP.setInterval(configHandler.GetNTPUpdateInterval());
+        NTP.setTimeZone(configHandler.GetTimezone());
+        NTP.setDayLight(configHandler.GetDLS());
     }
 }
 

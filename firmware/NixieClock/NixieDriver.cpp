@@ -28,6 +28,10 @@
 #define NX_3_TENS_BIT(_x) (NX_TENS(THRD_OFFSET, _x))
 #define NX_3_ONES_BIT(_x) (NX_ONES(THRD_OFFSET, _x))
 
+#define NX_DP1_BIT 1
+#define NX_DP2_BIT 2
+#define NX_DP3_BIT 3
+
 #define NX_INC(_x) ((++_x)%=10)
 
 NixieDriver::NixieDriver() :
@@ -105,6 +109,11 @@ void NixieDriver::setTubesEnabled(bool enabled)
     }
 }
 
+boolean NixieDriver::getTubesEnabled(void)
+{
+    return (digitalRead(PIN_HV_STAT) == HIGH) ? true:false;
+}
+
 void NixieDriver::show(byte tens1, byte ones1, byte tens2, byte ones2, byte tens3, byte ones3, bool dp1, bool dp2,
         bool dp3)
 {
@@ -163,6 +172,10 @@ void NixieDriver::show(byte tens1, byte ones1, byte tens2, byte ones2, byte tens
     this->digit[4] = tens3;
     this->digit[5] = ones3;
 
+    decimalPoints[0] = dp1;
+    decimalPoints[1] = dp2;
+    decimalPoints[2] = dp3;
+
     this->updated = true;
 }
 
@@ -189,6 +202,19 @@ void NixieDriver::update()
         this->outBuf[NX_BYTE_FROM_BIT(bitNr)] |= (1 << (bitNr % 8));
         bitNr = NX_3_ONES_BIT(this->actDigit[5]);
         this->outBuf[NX_BYTE_FROM_BIT(bitNr)] |= (1 << (bitNr % 8));
+
+        if (decimalPoints[0] == true)
+        {
+            this->outBuf[NX_BYTE_FROM_BIT(NX_DP1_BIT)] |= (1 << (NX_DP1_BIT % 8));
+        }
+        if (decimalPoints[1] == true)
+        {
+            this->outBuf[NX_BYTE_FROM_BIT(NX_DP2_BIT)] |= (1 << (NX_DP2_BIT % 8));
+        }
+        if (decimalPoints[2] == true)
+        {
+            this->outBuf[NX_BYTE_FROM_BIT(NX_DP3_BIT)] |= (1 << (NX_DP3_BIT % 8));
+        }
 
         for (ctr = 8; ctr-- > 0;)
         {
