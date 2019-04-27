@@ -3,7 +3,7 @@
 <head>
   <title>Nixie Clock</title>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link rel="stylesheet" href="bootstrap.min.css">
   <script src="jquery.min.js"></script>
   <script src="popper.min.js"></script>
@@ -23,10 +23,181 @@
 </nav>
 <br>
 
-<div class="container-fluid">
-  <h1>My First Bootstrap Page</h1>
-  <p>This is some text.</p>
+<div class="jumbotron jumbotron">
+	<div class="container">
+		<h1 class="text-center" id="CurrentTime">27.04.2019 12:00:00</h1>
+		<p class="lead">Last NTP Sync: 12/01/19 12:00:00</p>
+	</div>
 </div>
+
+<div class="container">
+  <h1>Status</h1>
+	<div class="row">
+		<div class="col">
+			<div class="btn-group" role="group" aria-label="Button group with nested dropdown">
+				<button type="button" class="btn btn-primary" onclick="sendData(1)" data-toggle="button" aria-pressed="false" autocomplete="off">LED On</button>
+				<button type="button" class="btn btn-primary" onclick="sendData(0)" data-toggle="button" aria-pressed="false" autocomplete="off">LED Off</button>
+				<div class="btn-group" role="group">
+					<button id="btnGroupDrop1" type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+						Brightness <span class="badge badge-light">10%</span>
+					</button>
+					<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+						<a class="dropdown-item" href="#">25%</a>
+						<a class="dropdown-item" href="#">50%</a>
+						<a class="dropdown-item" href="#">75%</a>
+						<a class="dropdown-item" href="#">100%</a>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="col">	
+			<div class="btn-group" role="group" aria-label="Button group with nested dropdown">
+				<button type="button" class="btn btn-primary" onclick="sendData(1)" data-toggle="button" aria-pressed="false" autocomplete="off">Tubes On</button>
+				<button type="button" class="btn btn-primary" onclick="sendData(0)" data-toggle="button" aria-pressed="false" autocomplete="off">Tubes Off</button>
+				<div class="btn-group" role="group">
+					<button id="btnGroupDrop1" type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+						Timeout <span class="badge badge-light">5 min.</span>
+					</button>
+					<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+						<a class="dropdown-item" href="#">Off</a>
+						<a class="dropdown-item" href="#">10s</a>
+						<a class="dropdown-item" href="#">30s</a>
+						<a class="dropdown-item" href="#">1 min.</a>
+						<a class="dropdown-item" href="#">2 min.</a>
+						<a class="dropdown-item" href="#">5 min.</a>
+						<a class="dropdown-item" href="#">10 min.</a>
+						<a class="dropdown-item" href="#">30 min.</a>
+						<a class="dropdown-item" href="#">1h</a>
+						<a class="dropdown-item" href="#">2h</a>
+						<a class="dropdown-item" href="#">3h</a>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="col">
+			<button type="button" class="btn btn-primary" onclick="sendData(1)">NTP Sync.</button>
+		</div>
+	</div>
+	<div class="row" style="padding-top: 10px;">
+		<div class="col">
+			<button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+				Details
+			</button>
+			<div class="collapse" id="collapseExample">
+				<div class="card card-body">
+					<table class="table table-striped">
+					  <thead>
+						<tr>
+						  <th scope="col"></th>
+						  <th scope="col">Item</th>
+						  <th scope="col">Value</th>
+						</tr>
+					  </thead>
+					  <tbody>
+						<tr>
+						  <th scope="row">1</th>
+						  <td>Uptime</td>
+						  <td>00:00:00</td>
+						</tr>
+						<tr>
+						  <th scope="row">2</th>
+						  <td>WiFi</td>
+						  <td>WiFiName</td>
+						</tr>
+						<tr>
+						  <th scope="row">3</th>
+						  <td>NTP Server</td>
+						  <td>ntp.ntp.com</td>
+						</tr>
+						<tr>
+						  <th scope="row">4</th>
+						  <td>NTP Update Interval</td>
+						  <td>5 Minutes</td>
+						</tr>
+						<tr>
+						  <th scope="row">5</th>
+						  <td>NTP Timezone</td>
+						  <td>+2 Hours</td>
+						</tr>
+						<tr>
+						  <th scope="row">6</th>
+						  <td>NTP Daylight Saving</td>
+						  <td>Enabled</td>
+						</tr>
+						<tr>
+						  <th scope="row">7</th>
+						  <td>Touch Sensor</td>
+						  <td>Enabled</td>
+						</tr>
+					  </tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+<script>
+
+function sendData(led) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("LEDState").innerHTML =
+      this.responseText;
+    }
+  };
+  xhttp.open("GET", "setLED?LEDstate="+led, true);
+  xhttp.send();
+}
+ 
+set500msInterval(function() {
+  getTime();
+  getDisplayTimeout();
+}, 500); //500mSeconds update rate
+
+set1000msInterval(function() {
+  getDisplayStatus();
+  getADC();
+}, 1000); //1000mSeconds update rate
+ 
+function getTime() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("CurrentTime").innerHTML =
+      this.responseText;
+    }
+  };
+  xhttp.open("GET", "getTime", true);
+  xhttp.send();
+}
+
+function getDisplayTimeout() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("ADCValue").innerHTML =
+      this.responseText;
+    }
+  };
+  xhttp.open("GET", "readADC", true);
+  xhttp.send();
+}
+
+function getData() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("ADCValue").innerHTML =
+      this.responseText;
+    }
+  };
+  xhttp.open("GET", "readADC", true);
+  xhttp.send();
+}
+</script>
 
 </body>
 </html>

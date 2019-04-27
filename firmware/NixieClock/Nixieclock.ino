@@ -34,10 +34,16 @@ void t1Callback();
 void t2Callback();
 void tDisplayOffCallback();
 void handleRoot();
+void getTime();
+void getDisplayOn();
+void setDisplayOn();
+void getDisplayTimeout();
+void getADC();
 void fileindex();
-void bootstrap();
+void jquery();
 void popper();
 void bootstrapmin();
+void bootstrapmincss();
 void processSyncEvent(NTPSyncEvent_t ntpEvent);
 void updateParameters(void);
 void convert(byte data, byte *tens, byte *ones);
@@ -52,9 +58,7 @@ ESP8266HTTPUpdateServer httpUpdater;
 WiFiUDP ntpUDP;
 DNSServer dnsServer;
 ConfigHandler configHandler(THING_NAME, INITIAL_PASSWORD, CONFIG_VERSION, dnsServer, server);
-NTPSyncEvent_t ntpEvent; // Last triggered event
 NixieDriver nxDrv;
-boolean syncEventTriggered = false; // True if a time even has been triggered
 boolean ntpActive = false;
 
 void t1Callback()
@@ -85,14 +89,19 @@ void t2Callback()
 void tDisplayOffCallback()
 {
     nxDrv.setTubesEnabled(false);
+    Serial.print("Display timeout elapsed, Tubes disabled.\n");
 }
 
 void touchInterrupt()
 {
+    Serial.print("Touch event detected.");
     if (false == nxDrv.getTubesEnabled())
     {
         nxDrv.setTubesEnabled(true);
+        Serial.print(" Tubes enabled.");
     }
+
+    Serial.print("\n");
     displayOff.restart();
 }
 
@@ -105,11 +114,11 @@ void setup()
 
     Serial.begin(115200);
     SPIFFS.begin();
-    
+
     runner.init();
 
     NTP.onNTPSyncEvent([](NTPSyncEvent_t event)
-    {   ntpEvent = event; syncEventTriggered = true;});
+    {  processSyncEvent(event); });
 
     //Throw out some version and status information
     Serial.println();
@@ -133,13 +142,20 @@ void setup()
 
     // Set up required URL handlers on the web server.
     server.on("/", handleRoot);
-    server.on("/", fileindex);
-server.on("/index.html", fileindex);
-server.on("/bootstrap.min.css", bootstrap);
-server.on("bootstrap.min.css", bootstrap);
-server.on("/popper.min.js", popper);
-server.on("/bootstrap.min.js", bootstrapmin);
-server.on("bootstrap.min.js", bootstrapmin);
+    server.on("/index.html", handleRoot);
+    server.on("/getTime", getTime);
+    server.on("/getDisplayOn", getDisplayOn);
+    server.on("/setDisplayOn", setDisplayOn);
+    server.on("/getDisplayTimeout", getDisplayTimeout);
+    server.on("/getADC", getADC);
+    server.on("/jquery.min.js", jquery);
+    server.on("jquery.min.js", jquery);
+    server.on("/popper.min.js", popper);
+    server.on("popper.min.js", popper);
+    server.on("/bootstrap.min.js", bootstrapmin);
+    server.on("bootstrap.min.js", bootstrapmin);
+    server.on("/bootstrap.min.css", bootstrapmincss);
+    server.on("bootstrap.min.css", bootstrapmincss);
     server.on("/config", [&]
     {   configHandler.handleConfig();});
     server.onNotFound([&]()
@@ -155,21 +171,15 @@ server.on("bootstrap.min.js", bootstrapmin);
     Serial.print("Nixie-Clock started\n");
     Serial.print("------------------\n\n");
 
-     t1.enable();
-     t2.enable();
+    t1.enable();
+    t2.enable();
 }
 
 void loop()
 {
-    // -- doLoop should be called as frequently as possible.
     runner.execute();
+    // -- doLoop should be called as frequently as possible.
     configHandler.doLoop();
-
-    if (syncEventTriggered)
-    {
-        processSyncEvent(ntpEvent);
-        syncEventTriggered = false;
-    }
 }
 
 /**
@@ -184,42 +194,67 @@ void handleRoot()
         return;
     }
 
-    String s =
-            "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>";
-    s += "<title>IotWebConf 03 Custom Parameters</title></head><body>Hello world!";
-    s += "<ul>";
-    /* s += "<li>String param value: ";
-     s += stringParamValue;
-     s += "<li>Int param value: ";
-     s += atoi(intParamValue);
-     s += "<li>Float param value: ";
-     s += atof(floatParamValue);*/
-    s += "</ul>";
-    s += "Go to <a href='config'>configure page</a> to change values.";
-    s += "</body></html>\n";
-
-    server.send(200, "text/html", s);
+    File file = SPIFFS.open("/index.html", "r");
+    size_t sent = server.streamFile(file, "text/html");
 }
 
-void fileindex()
+void jquery()
 {
-  File file = SPIFFS.open("/index.html", "r");
-  size_t sent = server.streamFile(file, "text/html");
-}
-void bootstrap()
-{
-  File file = SPIFFS.open("/bootstrap.min.css", "r");
-  size_t sent = server.streamFile(file, "text/css");
+    File file = SPIFFS.open("/jquery.min.js", "r");
+    size_t sent = server.streamFile(file, "application/javascript");
 }
 void popper()
 {
-  File file = SPIFFS.open("/popper.min.js", "r");
-  size_t sent = server.streamFile(file, "application/javascript");
+    File file = SPIFFS.open("/popper.min.js", "r");
+    size_t sent = server.streamFile(file, "application/javascript");
 }
 void bootstrapmin()
 {
-  File file = SPIFFS.open("/bootstrap.min.js", "r");
-  size_t sent = server.streamFile(file, "application/javascript");
+    File file = SPIFFS.open("/bootstrap.min.js", "r");
+    size_t sent = server.streamFile(file, "application/javascript");
+}
+void bootstrapmincss()
+{
+    File file = SPIFFS.open("/bootstrap.min.css", "r");
+    size_t sent = server.streamFile(file, "text/css");
+}
+void getTime()
+{
+    String s;
+    server.send(200, "text/html", s);
+}
+void getDisplayOn()
+{
+    String s;
+    server.send(200, "text/html", s);
+}
+void setDisplayOn()
+{
+    String ledState = "OFF";
+     String t_state = server.arg("LEDstate"); //Refer  xhttp.open("GET", "setLED?LEDstate="+led, true);
+     Serial.println(t_state);
+     if(t_state == "1")
+     {
+      digitalWrite(LED,LOW); //LED ON
+      ledState = "ON"; //Feedback parameter
+     }
+     else
+     {
+      digitalWrite(LED,HIGH); //LED OFF
+      ledState = "OFF"; //Feedback parameter
+     }
+
+     server.send(200, "text/plain", ledState); //Send web page
+}
+void getDisplayTimeout()
+{
+    String s;
+    server.send(200, "text/html", s);
+}
+void getADC()
+{
+    String s;
+    server.send(200, "text/html", s);
 }
 
 void wifiConnected()
@@ -228,7 +263,8 @@ void wifiConnected()
     {
         if (ntpActive == false)
         {
-            NTP.begin(configHandler.GetNTPServerName(), configHandler.GetTimezone(), configHandler.GetDLS(), 0, &ntpUDP);
+            NTP.begin(configHandler.GetNTPServerName(), configHandler.GetTimezone(), configHandler.GetDLS(), 0,
+                    &ntpUDP);
             ntpActive = true;
         }
     }
